@@ -1,122 +1,142 @@
-class WasteRequest: """Kinda simple container for waste collection details. Might refactor later if this grows… we'll see. """
+class WasteRequest:
+    """
+    Represents an individual waste collection request.
 
-next_id = 1   # I *think* this should work fine as a simple counter.
+    Note:
+        This is intentionally kept simple. If request metadata grows,
+        consider moving to a dataclass and/or adding validation.
+    """
 
-def __init__(self, waste_type: str, weight_kg: float, location: str):
-    # Not going to overthink validation here for now.
-    
-    self.request_id = WasteRequest.next_id
-    WasteRequest.next_id += 1
-    
-    self.waste_type = waste_type
-    self.weight_kg = weight_kg
-    self.location = location
-    
-    # Starting everything as "Pending" — makes sense for now.
-    self.status = "Pending"
+    _next_id = 1  # Simple in-memory incremental ID generator.
 
-def __str__(self):
-    # I could've spaced this better but it's fine.
-    return f"ID:{self.request_id} | Kind:{self.waste_type} | Wt:{self.weight_kg}kg | Addr:{self.location} | Status:{self.status}"
+    def __init__(self, waste_type: str, weight_kg: float, location: str):
+        # Assign a unique ID. Persistence layer would change this approach.
+        self.id = WasteRequest._next_id
+        WasteRequest._next_id += 1
 
-class WasteManager: """Manages the pile of incoming waste requests and tracks stats. TODO: Maybe later store these in a file? """
+        # Core fields
+        self.type = waste_type
+        self.weight = weight_kg
+        self.location = location
 
-def __init__(self):
-    # Using a list for now — maybe a dict later if I need fast lookups.
-    self.requests = []
+        # Base lifecycle status — could become an Enum if statuses expand.
+        self.status = "Pending"
 
-def add_request(self, rq: WasteRequest):
-    # Just throwing requests into the list.
-    self.requests.append(rq)
-    # Using f-strings because why not.
-    print(f"\n--> Added request #{rq.request_id} for {rq.waste_type}")
+    def __str__(self):
+        # Compact formatting for logs or CLI output.
+        return (
+            f"ID: {self.id} | Type: {self.type} | Weight: {self.weight}kg | "
+            f"Location: {self.location} | Status: {self.status}"
+        )
 
-def update_status(self, req_id: int, new_status: str):
-    # Probably could use a dict lookup but meh.
-    found_flag = False
-    for r in self.requests:
-        if r.request_id == req_id:
-            r.status = new_status
-            print(f"\n(Info) Updated status of request {req_id} → {new_status}")
-            found_flag = True
-            break   # I guess there won't be duplicates anyway.
-    
-    # If we never found it, complain…
-    if not found_flag:
-        print(f"\n[Warn] Couldn't find any request with id={req_id} (did I typo something?)")
 
-def view_all_requests(self):
-    # I always forget to handle empty lists, so adding this check…
-    if len(self.requests) == 0:
-        print("\nThere are currently *no* waste requests. (Quiet day!)")
-        return
-    
-    print("\n=== Waste Requests Overview ===")
-    
-    # Not sorting these — humans rarely bother unless necessary.
-    for entry in self.requests:
-        print(entry)
-    
-    print("--------------------------------")
+class WasteManager:
+    """
+    Manages waste requests and provides simple aggregated statistics.
 
-def get_statistics(self):
-    # Using slightly clunky counters here. Could optimize but no reason to.
-    total_weight = 0
-    by_type = {}
-    by_status = {"Pending": 0, "Scheduled": 0, "Completed": 0}
-    
-    # Running through everything — again, dict could store these but not now.
-    for rq in self.requests:
-        total_weight += rq.weight_kg
-        
-        # Weight per category
-        if rq.waste_type not in by_type:
-            by_type[rq.waste_type] = 0
-        by_type[rq.waste_type] += rq.weight_kg
-        
-        # Count statuses (note: if new statuses appear, they'll just… not be counted)
-        if rq.status in by_status:
-            by_status[rq.status] += 1
-        else:
-            # Eh, just record unexpected ones separately for now
-            if "Other" not in by_status:
-                by_status["Other"] = 0
-            by_status["Other"] += 1
-    
-    print("\n=== Waste Stats ===")
-    print(f"Total requests logged: {len(self.requests)}")
-    print(f"Total estimated weight: {total_weight:.2f} kg")
+    Note:
+        For now, this class serves both as a controller and in-memory store.
+        A proper repository/service split can be done if/when requirements grow.
+    """
 
-    print("\nBreakdown by Type:")
-    for t, wt in by_type.items():
-        print(f" • {t}: {wt:.2f} kg")
+    def __init__(self):
+        # Storing everything in a list — more than enough at this scale.
+        self._requests = []
 
-    print("\nBreakdown by Status:")
-    for st, c in by_status.items():
-        print(f" • {st}: {c}")
+    def add_request(self, request: WasteRequest):
+        """Register a new waste request."""
+        self._requests.append(request)
+        print(f"\n✔ Request {request.id} ({request.type}) registered.")
 
-    print("=====================")
+    def update_status(self, request_id: int, new_status: str):
+        """Update the status of a request by ID."""
+        req = self._find(request_id)
+        if not req:
+            print(f"\n✖ No request found with ID {request_id}.")
+            return
 
-~~~ Example usage (just kept it simple) ~~~
+        req.status = new_status
+        print(f"\n↺ Request {request_id} updated → '{new_status}'")
 
-if name == "main": mgr = WasteManager()
+    def view_all_requests(self):
+        """Display all stored requests."""
+        if not self._requests:
+            print("\nℹ No waste requests in the system.")
+            return
 
-# Adding a few sample requests.
-# I should maybe auto-generate these later?
-r1 = WasteRequest("Recyclable", 15.5, "123 Main St")
-r2 = WasteRequest("General",     22.0, "456 Oak Ave")
-r3 = WasteRequest("Hazardous",    1.2, "789 Pine Ln")
+        print("\n--- Current Waste Requests ---")
+        for req in self._requests:
+            print(req)
+        print("------------------------------")
 
-mgr.add_request(r1)
-mgr.add_request(r2)
-mgr.add_request(r3)
+    def get_statistics(self):
+        """Aggregate and print basic waste statistics."""
+        if not self._requests:
+            print("\nℹ No statistics available — no requests recorded.")
+            return
 
-mgr.view_all_requests()
+        total_weight = 0.0
+        weight_by_type = {}
+        status_count = {"Pending": 0, "Scheduled": 0, "Completed": 0}
 
-mgr.update_status(1, "Scheduled")
-mgr.update_status(2, "Completed")
-mgr.update_status(4, "Failed?")   # Yeah this ID won’t exist.
+        for req in self._requests:
+            total_weight += req.weight
 
-mgr.view_all_requests()
+            # Group by waste type
+            weight_by_type[req.type] = weight_by_type.get(req.type, 0.0) + req.weight
 
-mgr.get_statistics()
+            # Track request statuses
+            status_count[req.status] = status_count.get(req.status, 0) + 1
+
+        print("\n--- Waste Management Statistics ---")
+        print(f"Total Requests: {len(self._requests)}")
+        print(f"Total Weight: {total_weight:.2f} kg")
+
+        print("\nWeight by Type:")
+        for t, w in weight_by_type.items():
+            print(f"- {t}: {w:.2f} kg")
+
+        print("\nRequests by Status:")
+        for st, c in status_count.items():
+            print(f"- {st}: {c} request(s)")
+        print("-----------------------------------")
+
+    # -- Internal helpers --
+
+    def _find(self, request_id: int):
+        """Retrieve a request by ID. Returns None if not found."""
+        # This could be O(1) with a dict, but simplicity is fine here.
+        for req in self._requests:
+            if req.id == request_id:
+                return req
+        return None
+
+
+# --- Demonstration (basic CLI-style usage) ---
+
+if __name__ == "__main__":
+
+    manager = WasteManager()
+
+    # Register some sample requests.
+    r1 = WasteRequest("Recyclable", 15.5, "123 Main St")
+    r2 = WasteRequest("General", 22.0, "456 Oak Ave")
+    r3 = WasteRequest("Hazardous", 1.2, "789 Pine Ln")
+
+    manager.add_request(r1)
+    manager.add_request(r2)
+    manager.add_request(r3)
+
+    # Show current state
+    manager.view_all_requests()
+
+    # Update statuses
+    manager.update_status(1, "Scheduled")
+    manager.update_status(2, "Completed")
+    manager.update_status(4, "Failed")  # Expected: ID not found
+
+    # Show updated list
+    manager.view_all_requests()
+
+    # Show statistics
+    manager.get_statistics()
