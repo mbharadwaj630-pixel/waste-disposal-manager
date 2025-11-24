@@ -1,6 +1,7 @@
 Waste Management System
 
 Overview
+
 A simple waste management system built with Python, allowing users to manage waste disposal requests and track their status.
 
 Features
@@ -18,4 +19,5 @@ Steps to Install & Run the Project
 
 Instructions for Testing
 1. Run the project and follow the menu prompts to add, update, and view waste requests.
+
 2. Test the `get_statistics` method to view waste management statistics.
