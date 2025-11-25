@@ -32,21 +32,21 @@ class WasteManager:
     def add_request(self, request: WasteRequest):
         """Adds a new waste request to the system."""
         self.requests.append(request)
-        print(f"\n✅ Request {request.request_id} ({request.waste_type}) registered successfully.")
+        print(f"\n Request {request.request_id} ({request.waste_type}) registered successfully.")
 
     def update_status(self, request_id: int, new_status: str):
         """Updates the status of a specific waste request."""
         for request in self.requests:
             if request.request_id == request_id:
                 request.status = new_status
-                print(f"\n🔄 Request {request_id} status updated to '{new_status}'.")
+                print(f"\n Request {request_id} status updated to '{new_status}'.")
                 return
-        print(f"\n❌ Error: Request ID {request_id} not found.")
+        print(f"\n Error: Request ID {request_id} not found.")
 
     def view_all_requests(self):
         """Prints a list of all current requests."""
         if not self.requests:
-            print("\nℹ️ No waste requests currently in the system.")
+            print("\n No waste requests currently in the system.")
             return
 
         print("\n--- Current Waste Requests ---")
@@ -55,7 +55,7 @@ class WasteManager:
         print("------------------------------")
 
     def get_statistics(self):
-        """Calculates and prints statistics on waste types and weights."""
+        """Calculates  and prints statistics on waste types and weights."""
         total_weight = 0
         weight_by_type = {}
         status_count = {"Pending": 0, "Scheduled": 0, "Completed": 0}
