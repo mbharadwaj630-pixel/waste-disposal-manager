@@ -1,142 +1,108 @@
 class WasteRequest:
-    """
-    Represents an individual waste collection request.
-
-    Note:
-        This is intentionally kept simple. If request metadata grows,
-        consider moving to a dataclass and/or adding validation.
-    """
-
-    _next_id = 1  # Simple in-memory incremental ID generator.
+    """Represents a single request for waste collection."""
+    
+    # Class-level counter for unique request IDs
+    next_id = 1
 
     def __init__(self, waste_type: str, weight_kg: float, location: str):
-        # Assign a unique ID. Persistence layer would change this approach.
-        self.id = WasteRequest._next_id
-        WasteRequest._next_id += 1
-
-        # Core fields
-        self.type = waste_type
-        self.weight = weight_kg
+        """
+        Initializes a new waste request.
+        
+        Args:
+            waste_type: The type of waste (e.g., 'Recyclable', 'Hazardous', 'General').
+            weight_kg: The estimated weight in kilograms.
+            location: The pickup location/address.
+        """
+        self.request_id = WasteRequest.next_id
+        WasteRequest.next_id += 1
+        self.waste_type = waste_type
+        self.weight_kg = weight_kg
         self.location = location
-
-        # Base lifecycle status — could become an Enum if statuses expand.
-        self.status = "Pending"
+        self.status = "Pending"  # Status can be 'Pending', 'Scheduled', 'Completed'
 
     def __str__(self):
-        # Compact formatting for logs or CLI output.
-        return (
-            f"ID: {self.id} | Type: {self.type} | Weight: {self.weight}kg | "
-            f"Location: {self.location} | Status: {self.status}"
-        )
-
+        return f"ID: {self.request_id} | Type: {self.waste_type} | Weight: {self.weight_kg}kg | Location: {self.location} | Status: {self.status}"
 
 class WasteManager:
-    """
-    Manages waste requests and provides simple aggregated statistics.
-
-    Note:
-        For now, this class serves both as a controller and in-memory store.
-        A proper repository/service split can be done if/when requirements grow.
-    """
-
+    """Manages all waste disposal requests and provides statistics."""
+    
     def __init__(self):
-        # Storing everything in a list — more than enough at this scale.
-        self._requests = []
+        self.requests = []
 
     def add_request(self, request: WasteRequest):
-        """Register a new waste request."""
-        self._requests.append(request)
-        print(f"\n✔ Request {request.id} ({request.type}) registered.")
+        """Adds a new waste request to the system."""
+        self.requests.append(request)
+        print(f"\n✅ Request {request.request_id} ({request.waste_type}) registered successfully.")
 
     def update_status(self, request_id: int, new_status: str):
-        """Update the status of a request by ID."""
-        req = self._find(request_id)
-        if not req:
-            print(f"\n✖ No request found with ID {request_id}.")
-            return
-
-        req.status = new_status
-        print(f"\n↺ Request {request_id} updated → '{new_status}'")
+        """Updates the status of a specific waste request."""
+        for request in self.requests:
+            if request.request_id == request_id:
+                request.status = new_status
+                print(f"\n🔄 Request {request_id} status updated to '{new_status}'.")
+                return
+        print(f"\n❌ Error: Request ID {request_id} not found.")
 
     def view_all_requests(self):
-        """Display all stored requests."""
-        if not self._requests:
-            print("\nℹ No waste requests in the system.")
+        """Prints a list of all current requests."""
+        if not self.requests:
+            print("\nℹ️ No waste requests currently in the system.")
             return
 
         print("\n--- Current Waste Requests ---")
-        for req in self._requests:
-            print(req)
+        for request in self.requests:
+            print(request)
         print("------------------------------")
 
     def get_statistics(self):
-        """Aggregate and print basic waste statistics."""
-        if not self._requests:
-            print("\nℹ No statistics available — no requests recorded.")
-            return
-
-        total_weight = 0.0
+        """Calculates and prints statistics on waste types and weights."""
+        total_weight = 0
         weight_by_type = {}
         status_count = {"Pending": 0, "Scheduled": 0, "Completed": 0}
 
-        for req in self._requests:
-            total_weight += req.weight
-
-            # Group by waste type
-            weight_by_type[req.type] = weight_by_type.get(req.type, 0.0) + req.weight
-
-            # Track request statuses
-            status_count[req.status] = status_count.get(req.status, 0) + 1
+        for request in self.requests:
+            total_weight += request.weight_kg
+            # Tally weight by type
+            weight_by_type[request.waste_type] = weight_by_type.get(request.waste_type, 0) + request.weight_kg
+            # Tally status count
+            status_count[request.status] = status_count.get(request.status, 0) + 1
 
         print("\n--- Waste Management Statistics ---")
-        print(f"Total Requests: {len(self._requests)}")
+        print(f"Total Requests: {len(self.requests)}")
         print(f"Total Weight: {total_weight:.2f} kg")
-
         print("\nWeight by Type:")
-        for t, w in weight_by_type.items():
-            print(f"- {t}: {w:.2f} kg")
-
+        for type, weight in weight_by_type.items():
+            print(f"- {type}: {weight:.2f} kg")
         print("\nRequests by Status:")
-        for st, c in status_count.items():
-            print(f"- {st}: {c} request(s)")
+        for status, count in status_count.items():
+            print(f"- {status}: {count} requests")
         print("-----------------------------------")
 
-    # -- Internal helpers --
 
-    def _find(self, request_id: int):
-        """Retrieve a request by ID. Returns None if not found."""
-        # This could be O(1) with a dict, but simplicity is fine here.
-        for req in self._requests:
-            if req.id == request_id:
-                return req
-        return None
-
-
-# --- Demonstration (basic CLI-style usage) ---
+# --- Demonstration of Usage ---
 
 if __name__ == "__main__":
-
     manager = WasteManager()
 
-    # Register some sample requests.
-    r1 = WasteRequest("Recyclable", 15.5, "123 Main St")
-    r2 = WasteRequest("General", 22.0, "456 Oak Ave")
-    r3 = WasteRequest("Hazardous", 1.2, "789 Pine Ln")
+    # 1. Register new requests
+    req1 = WasteRequest("Recyclable", 15.5, "123 Main St")
+    req2 = WasteRequest("General", 22.0, "456 Oak Ave")
+    req3 = WasteRequest("Hazardous", 1.2, "789 Pine Ln")
 
-    manager.add_request(r1)
-    manager.add_request(r2)
-    manager.add_request(r3)
-
-    # Show current state
+    manager.add_request(req1)
+    manager.add_request(req2)
+    manager.add_request(req3)
+    
+    # 2. View all requests
     manager.view_all_requests()
 
-    # Update statuses
+    # 3. Update status of a request (simulating scheduling and completion)
     manager.update_status(1, "Scheduled")
     manager.update_status(2, "Completed")
-    manager.update_status(4, "Failed")  # Expected: ID not found
+    manager.update_status(4, "Failed") # Test a non-existent ID
 
-    # Show updated list
+    # 4. View updated requests
     manager.view_all_requests()
 
-    # Show statistics
+    # 5. Check statistics
     manager.get_statistics()
